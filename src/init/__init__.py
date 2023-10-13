@@ -2,14 +2,25 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from .config import Config
-# from . import models
+from .models import *
+from .database import db
+from .routes import *
+
+
+
+
 app = Flask(__name__)
 app.config.from_object(Config)
 
-db = SQLAlchemy(app)
+
 migrate = Migrate(app, db)
 
-# from models.example import Example
+db.init_app(app)
+
+
+app.register_blueprint(example_route)
+
+
 
 @app.route("/")
 def hello():

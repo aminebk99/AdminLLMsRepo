@@ -1,4 +1,5 @@
-from models.example import Example
+from .example import Example
+
 
 
 
