@@ -1,5 +1,9 @@
 from init  import db
 
+class LLMType(Enum):
+    OS_LLM = 'OS_LLM'
+    Cloud_LLM = 'Cloud_LLM'
+
 class LLMTemplate(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False)
