@@ -1,6 +1,6 @@
-from models.example import Example
-from models.LLMTemplate import LLMTemplate
-from models.osllm import OSLLM
+from .example import Example
+from .LLMTemplate import *
+from .osllm import OSLLM
 
 
 

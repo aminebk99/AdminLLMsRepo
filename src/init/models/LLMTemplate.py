@@ -1,4 +1,7 @@
-from init  import db
+from ..database import db
+from enum import Enum
+import uuid
+from datetime import datetime
 
 class LLMType(Enum):
     OS_LLM = 'OS_LLM'
@@ -15,3 +18,17 @@ class LLMTemplate(db.Model):
     is_active = db.Column(db.Boolean, nullable=False, default=True)
     tags = db.Column(db.String, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'docker_image_url': self.docker_image_url,
+            'type': self.type.value,  # Access the value of the Enum
+            'uuid': self.uuid,
+            'version': self.version,
+            'is_active': self.is_active,
+            'tags': self.tags,
+            'created_at': self.created_at
+        }

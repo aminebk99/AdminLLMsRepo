@@ -6,12 +6,13 @@ from .models import *
 from .database import db
 from .routes import *
 
-
-
-
+from init.routes.template_route import template_route
 app = Flask(__name__)
 app.config.from_object(Config)
 
+app.register_blueprint(template_route, url_prefix='/api/v1')
+
+app.secret_key = app.config['SECRET_KEY']
 
 migrate = Migrate(app, db)
 
