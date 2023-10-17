@@ -1,40 +1,36 @@
 # init/routes/template_route.py
-from flask import Blueprint, request, current_app
-from init.controllers.template_controller import TemplateController
+from flask import Blueprint, redirect
 from authlib.integrations.flask_client import OAuth
 from ..config import Config
 
 template_route = Blueprint('template', __name__)
-controller = TemplateController()
 oauth = OAuth()
 
-github = oauth.register(
-    name='github',
-    client_id='your_github_client_id',
-    client_secret='your_github_client_secret',
-    authorize_url='https://github.com/login/oauth/authorize',
-    authorize_params=None,
-    authorize_params_callback=None,
-    authorize_extra_params=None,
-    authorize_url_params=None,
-    authorize_response_callback=None,
-    client_kwargs={'scope': 'user:email'},
-    request_token_url=None,
-    access_token_url='https://github.com/login/oauth/access_token',
-    access_token_params=None,
-    refresh_token_url=None,
-    redirect_uri='http://localhost:5000//login/callback/github',
-    client_cls=None,
-    client=none,
-)
+def configure_github_oauth():
+    github = oauth.register(
+        name='github',
+        client_id=Config.GITHUB_CLIENT_ID,
+        client_secret=Config.GITHUB_CLIENT_SECRET,
+        authorize_url='https://github.com/login/oauth/authorize',
+        client_kwargs={'scope': 'user:email'},
+        redirect_uri='http://localhost:5000/login/callback/github'  # Update with your callback URL
+    )
+    return github
 
-@template_route.route('/login/github', methods=['GET'])
+@template_route.route('/login/github_oauth', methods=['GET'])
 def login_with_github():
-    return controller.login_with_github(github)
+    github = configure_github_oauth()
+    return redirect(github.authorize_redirect())
+
+
 
 @template_route.route('/login/callback/github', methods=['GET'])
 def call_back_login_with_github():
-    return controller.callback_github(github)
+    github = configure_github_oauth()
+    token = github.authorize_access_token()
+    user = github.parse_id_token(token)
+    # Handle user data as needed
+    return f'Hello, {user["sub"]}'
 
 @template_route.route('/login/huggingface', methods=['POST'])
 def login_with_huggingface():

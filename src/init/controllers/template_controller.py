@@ -45,8 +45,8 @@ class TemplateController:
     def fetch_github_repos():
         try:
             user_token = request.headers.get("Authorization")
-            repos = TemplateService.fetchGithubRepos(user_token)
-            return jsonify(repos), 200
+            # repos = TemplateService.fetchGithubRepos(user_token)
+            return jsonify( user_token), 200
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 
