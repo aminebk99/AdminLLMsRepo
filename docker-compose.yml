@@ -5,40 +5,49 @@ services:
     build: 
       context: .
     ports:
-      - "5050:5000"
+      - "5000:5000"
     environment:
-      - DATABASE_HOST=db
+      - DATABASE_HOST=src_db
       - DATABASE_PORT=3306
       - DATABASE_USER=root
       - DATABASE_PASSWORD=secret
-      - DATABASE_NAME=llms
+      - DATABASE_NAME=llmsdb
     volumes:
       - ./src:/app
     
     restart: always
     depends_on:
-      - db
+      - src_db
+    networks:
+      - llm_network
 
-  db:
+  src_db:
     image: mysql:8.0
     environment:
       MYSQL_ROOT_PASSWORD: secret
-      MYSQL_DATABASE: llms
+      MYSQL_DATABASE: llmsdb
+      MYSQL_USER: llmsdb
+      MYSQL_PASSWORD: secret
     
     restart: always
     volumes:
       - ./db:/var/lib/mysql
+    networks:
+      - llm_network
 
   phpmyadmin:
     image: phpmyadmin
     environment:
-      PMA_HOST: db
-      PMA_PORT: 3306
-      PMA_USER: root
-      PMA_PASSWORD: secret
+      PMA_HOST: src_db
     ports:
-      - "8090:8080"
+      - "8080:8080"
     restart: always
     depends_on:
-      - db
+      - src_db
+    networks:
+      - llm_network
 
+
+networks:
+  llm_network:
+    driver: bridge
