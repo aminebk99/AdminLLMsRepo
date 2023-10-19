@@ -1,11 +1,11 @@
-from ..models.cloudllm import CloudLLM
+from ..models.LLMTemplate import LLMTemplate
 from init.database import db
 from flask import jsonify
 
 class CloudLLMService:
     @staticmethod
     def getCloudLLM(cloudllm_id):
-        cloudLLM = CloudLLM.query.get(cloudllm_id)
+        cloudLLM = LLMTemplate.query.get(cloudllm_id)
         if cloudLLM is None:
             return jsonify({"message": f"No CloudLLM found with id: {cloudllm_id}"})
         else:
@@ -13,11 +13,11 @@ class CloudLLMService:
 
     @staticmethod
     def getAllCloudLLMs():
-        return jsonify([cloudLLM.to_dict() for cloudLLM in CloudLLM.query.all()])
+        return jsonify([cloudLLM.to_dict() for cloudLLM in LLMTemplate.query.all()])
 
     @staticmethod
     def deleteCloudLLM(cloudllm_id):
-        cloudLLM = CloudLLM.query.get(cloudllm_id)
+        cloudLLM = LLMTemplate.query.get(cloudllm_id)
         if cloudLLM is None:
             return jsonify({"message": f"No CloudLLM found with id: {cloudllm_id}"})
         else:
@@ -27,7 +27,7 @@ class CloudLLMService:
         
     @staticmethod
     def changeCloudLLMStatus(cloudllm_id, status):
-        cloudLLM = CloudLLM.query.get(cloudllm_id)
+        cloudLLM = LLMTemplate.query.get(cloudllm_id)
         if cloudLLM is None:
             return jsonify({"message": f"No CloudLLM found with id: {cloudllm_id}"})
         else:

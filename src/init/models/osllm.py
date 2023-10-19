@@ -1,7 +1,20 @@
-from init  import db
+# from init  import db
+
 
 class OSLLM:
-    def __init__(self, id, name, description, docker_image_url, type, uuid, version, is_active, tags, created_at):
+    def __init__(
+        self,
+        id,
+        name,
+        description,
+        docker_image_url,
+        type,
+        uuid,
+        version,
+        is_active,
+        tags,
+        created_at,
+    ):
         self.id = id
         self.name = name
         self.description = description

@@ -17,6 +17,9 @@ def token_required(f):
             return jsonify({'message': 'Token is missing'}), 401
         try:
             data = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+            role = data["role"] 
+            if role != "admin":
+                return jsonify({'message': 'You are not authorized to access this route'}), 401
         except:
             return jsonify({'message': 'Token is invalid'}), 401
         return f(*args, **kwargs)
