@@ -1,1 +1,2 @@
 from .ExampleController import ExampleController
+from .template_controller import TemplateController

@@ -1,6 +1,7 @@
 # init/controllers/template_controller.py
 from flask import request, jsonify
 from init.services import TemplateService
+import requests
 
 class TemplateController:
 
@@ -30,10 +31,23 @@ class TemplateController:
 
     def fetch_models_from_huggingface():
         try:
-            models = TemplateService.fetchModelsFromHuggingFace()
-            return jsonify(models), 200
+        # Define the Hugging Face models API endpoint
+            huggingface_models_url = "https://api-inference.huggingface.co/models"
+
+        # Send a GET request to the Hugging Face API to fetch the available models
+            response = requests.get(huggingface_models_url)
+
+            if response.status_code == 200:
+                models_data = response.json()
+
+                model_names = [model['model_id'] for model in models_data]
+
+                return jsonify({'models': model_names})
+
+            else:
+                return jsonify({'error': 'Failed to fetch models from Hugging Face'})
         except Exception as e:
-            return jsonify({"error": str(e)}), 500
+            return jsonify({'error': str(e)})
 
     def create_docker_image( model_id):
         try:
