@@ -6,3 +6,4 @@ python-dotenv
 mysql-connector-python
 Flask-OAuthlib
 Authlib
+requests
