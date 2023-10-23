@@ -3,6 +3,10 @@ from ..services.cloudllm_service import CloudLLMService
 class CloudLLMController:
 
     @staticmethod
+    def CreateCloudLLM(cloudData):
+        return CloudLLMService.CreateCloudLLM(cloudData)
+
+    @staticmethod
     def getCloudLLM(cloudllm_id):
         return CloudLLMService.getCloudLLM(cloudllm_id)
     

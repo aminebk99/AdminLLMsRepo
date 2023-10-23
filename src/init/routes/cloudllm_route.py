@@ -6,8 +6,15 @@ from ..middleware.auth_middleware import token_required
 
 cloudllm_route = Blueprint('cloudllm_route', __name__)
 
+
+@cloudllm_route.route('/cloudllm/create', methods=['POST'])
+def create_cloudllm():
+    if request.method == 'POST':
+        return CloudLLMController.CreateCloudLLM(request.json)
+
+
 @cloudllm_route.route('/cloudllm', methods=['GET'])
-@token_required
+# @token_required
 def cloudllm():
     if request.method == 'GET':
         return CloudLLMController.getAllCloudLLMs()

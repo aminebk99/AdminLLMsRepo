@@ -9,7 +9,7 @@ class LLMTemplate(db.Model):
     docker_image_url = db.Column(db.String(200))
     type = db.Column(db.Enum('OS_LLM', 'Cloud_LLM'), nullable=False)
     uuid = db.Column(db.String(36), default=str(uuid.uuid4()), unique=True, nullable=False)
-    version = db.Column(db.String(20))
+    version = db.Column(db.Float, default=1.0)
     is_active = db.Column(db.Boolean, default=True)
     tags = db.Column(db.String(200))
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
