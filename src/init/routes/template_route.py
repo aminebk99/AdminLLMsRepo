@@ -5,6 +5,7 @@ from init import controllers
 from ..config import Config
 import os
 import requests
+import subprocess
 
 
 template_route = Blueprint('template', __name__)
@@ -90,3 +91,25 @@ def fetch_all_repos():
         return jsonify(repos)
     else:
         return jsonify({'error': f'Failed to fetch repositories. Status code: {response.status_code}'}), response.status_code
+    
+@template_route.route('/github/clone', methods=['POST'])
+def clone_repository():
+    GITHUB_ACCESS_TOKEN = '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'
+    data = request.get_json()
+    repo_url = data.get('repo_url')
+    repo_name = repo_url.split('/')[-1].split('.')[0]
+    headers = {
+        'Authorization': f'token {GITHUB_ACCESS_TOKEN}'
+    }
+    response = requests.get(f'https://api.github.com/repos/{repo_url}', headers=headers)
+
+    if response.status_code == 200:
+        clone_command = ['git', 'clone', f'https://github.com/{repo_url}.git']
+        result = subprocess.run(clone_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+        if result.returncode == 0:
+            return jsonify({"message": f"Repository {repo_name} cloned successfully."})
+        else:
+            return jsonify({"error": f"Failed to clone repository {repo_name}.", "output": result.stderr}), 500
+    else:
+        return jsonify({"error": f"Repository {repo_name} not found or an error occurred."}), 404
