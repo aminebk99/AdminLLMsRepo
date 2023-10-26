@@ -91,47 +91,53 @@ def fetch_all_repos():
         return jsonify(repos)
     else:
         return jsonify({'error': f'Failed to fetch repositories. Status code: {response.status_code}'}), response.status_code
-
 @template_route.route('/github/clone', methods=['POST'])
-def clone_repository():
-    data = request.json
-    username = data.get("username")
+def clone_private_repo():
+    data = request.get_json()  
     repo_name = data.get('repo_name')
-    destination = data.get('destination', '.')  # Default to current directory if not specified
-    token = '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'
-    headers = {
-        'Authorization': f'Bearer {token}',
-        'Accept': 'application/vnd.github.v3+json',
-    }
+    token_user = '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'
+    username = data.get('username')
+    current_directory = os.getcwd()
+    file_name = 'Dockerfile'
+    repos_folder = os.path.join(current_directory, 'deployemnt', repo_name)
+    clone_url = f"https://{token_user}@github.com/{username}/{repo_name}.git"
+    file_path = os.path.join(repos_folder, file_name)
     try:
-        response = requests.get(f'https://api.github.com/repos/{username}/{repo_name}', headers=headers)
-        if response.status_code == 200:
-            destination = os.path.normpath(destination)
-            if os.path.exists(destination) and os.path.isdir(destination):
-                clone_cmd = ['git', 'clone', f"https://{token}@github.com/{username}/{repo_name}.git", destination]
-                cmd = subprocess.run(clone_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
-                if cmd.returncode == 0:
-                    existing_dockerfile_path = 'init/Dockerfile'
-                    with open(existing_dockerfile_path, 'r') as existing_dockerfile:
-                        dockerfile_content = existing_dockerfile.read()
-                    cloned_repo_directory = os.path.join(destination, repo_name)
-                    cloned_repo_path = os.path.join(cloned_repo_directory, 'Dockerfile')
-                    with open(cloned_repo_path, 'w') as dockerfile:
-                        dockerfile.write(dockerfile_content)
+        subprocess.run(["git", "clone", clone_url, repos_folder], check=True)
+        with open('./docker/dockerfile','r') as firstfile, open(file_path,'a') as secondfile: 
+            for line in firstfile: 
+                secondfile.write(line)
+        # subprocess.run(["docker", "build", '-t', repo_name, repos_folder])
+        repo_name = repo_name.lower()
+        tag = 'latest'
+        def build_image(repo_path,repo_name ,tag='latest'):
+            client = docker.from_env()
+            try:
+                repo_name = repo_name.lower()
+                print(f"Building image from {repo_path}")
+                image, build_log = client.images.build(path=f'{repo_path}', tag=f"{repo_name}:{tag}")
+                # verbose logs
+                for line in build_log:
+                    print(line)
+                print(f"Image built: {image}")
+                return image
+            except BuildError as build_err:
+                print(f"Build error: {build_err}")
+                return None
+            except APIError as api_err:
+                print(f"API error: {api_err}")
+                return None
+            except Exception as e:
+                print(f"An unexpected error occurred: {e}")
+                return None
+        build_image(repo_path=repos_folder, repo_name=repo_name, tag=tag)
+        
 
-                    clone_cmd = ['git', 'add', 'Dockerfile']
-                    cmd = subprocess.run(clone_cmd, cwd=cloned_repo_directory, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-                    if cmd.returncode == 0:
-                        return jsonify({"message": f"Repository {repo_name} cloned successfully, and Dockerfile added to {cloned_repo_directory}."})
-                    else:
-                        return jsonify({"error": f"Failed to add Dockerfile to the repository.", "output": cmd.stderr}), 500 
-                else:
-                    return jsonify({"error": f"Failed to clone repository {repo_name}.", "output": cmd.stderr}), 500
-            else:
-                return jsonify({"error": "Invalid destination directory."}), 400
-        else:
-            return jsonify({"error": f"Repository {repo_name} not found or an error occurred."}), 404
+        return repos_folder
     except subprocess.CalledProcessError as e:
-        return jsonify({"error": f"Failed to execute 'git clone': {str(e)}"}), 500
+        print(f"Subprocess error: {e}")
+        return False
     except Exception as e:
-        return jsonify({"error": f"An unexpected error occurred: {str(e)}"}), 500
+        print(f"An unexpected error occurred: {e}")
+        return False
+
