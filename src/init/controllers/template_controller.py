@@ -4,16 +4,6 @@ from init.services import TemplateService
 import requests
 
 class TemplateController:
-    def clone_private_repo(self, data):
-        data = request.get_json()
-        result = TemplateService.clone_and_build_image(data)
-
-        if result:
-            return jsonify({'message': 'Repository cloned and image built successfully'}), 200
-        else:
-            return jsonify({'error': 'Cloning and image building failed'}), 500
-
-
 
     def login_with_huggingface():
         try:
@@ -21,20 +11,13 @@ class TemplateController:
             return jsonify({"access_token": token}), 200
         except Exception as e:
             return jsonify({"error": str(e)}), 500
-
     def fetch_models_from_huggingface():
         try:
-        # Define the Hugging Face models API endpoint
             huggingface_models_url = "https://api-inference.huggingface.co/models"
-
-        # Send a GET request to the Hugging Face API to fetch the available models
             response = requests.get(huggingface_models_url)
-
             if response.status_code == 200:
                 models_data = response.json()
-
                 model_names = [model['model_id'] for model in models_data]
-
                 return jsonify({'models': model_names})
 
             else:
@@ -48,11 +31,10 @@ class TemplateController:
             return jsonify({"message": "Docker image creation in progress"}), 202
         except Exception as e:
             return jsonify({"error": str(e)}), 500
-
+        
     def fetch_github_repos():
         try:
             user_token = request.headers.get("Authorization")
-            # repos = TemplateService.fetchGithubRepos(user_token)
             return jsonify( user_token), 200
         except Exception as e:
             return jsonify({"error": str(e)}), 500
