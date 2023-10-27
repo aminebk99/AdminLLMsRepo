@@ -4,21 +4,14 @@ from init.services import TemplateService
 import requests
 
 class TemplateController:
+    def clone_private_repo(self, data):
+        data = request.get_json()
+        result = TemplateService.clone_and_build_image(data)
 
-
-    def login_with_github(self, github):  # Add 'self' as the first parameter
-        try:
-            service = TemplateService.loginWithGithub(github)
-            return service
-        except Exception as e:
-            return jsonify({"error": str(e)}), 500
-
-    def callback_github(self, github):  # Add 'self' as the first parameter
-        token = github.authorize_access_token()
-        if token:
-            return token
+        if result:
+            return jsonify({'message': 'Repository cloned and image built successfully'}), 200
         else:
-            return 'Access denied', 400
+            return jsonify({'error': 'Cloning and image building failed'}), 500
 
 
 

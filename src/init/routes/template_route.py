@@ -1,6 +1,7 @@
 # init/routes/template_route.py
 from flask import Blueprint, url_for, current_app, request, jsonify
 from authlib.integrations.flask_client import OAuth
+from init.services.template_service import TemplateService
 from init import controllers
 from ..config import Config
 import os
@@ -91,53 +92,28 @@ def fetch_all_repos():
         return jsonify(repos)
     else:
         return jsonify({'error': f'Failed to fetch repositories. Status code: {response.status_code}'}), response.status_code
+    
 @template_route.route('/github/clone', methods=['POST'])
 def clone_private_repo():
-    data = request.get_json()  
+    data = request.get_json()
     repo_name = data.get('repo_name')
-    token_user = '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'
     username = data.get('username')
-    current_directory = os.getcwd()
-    file_name = 'Dockerfile'
-    repos_folder = os.path.join(current_directory, 'deployemnt', repo_name)
-    clone_url = f"https://{token_user}@github.com/{username}/{repo_name}.git"
-    file_path = os.path.join(repos_folder, file_name)
-    try:
-        subprocess.run(["git", "clone", clone_url, repos_folder], check=True)
-        with open('./docker/dockerfile','r') as firstfile, open(file_path,'a') as secondfile: 
-            for line in firstfile: 
-                secondfile.write(line)
-        # subprocess.run(["docker", "build", '-t', repo_name, repos_folder])
-        repo_name = repo_name.lower()
-        tag = 'latest'
-        def build_image(repo_path,repo_name ,tag='latest'):
-            client = docker.from_env()
-            try:
-                repo_name = repo_name.lower()
-                print(f"Building image from {repo_path}")
-                image, build_log = client.images.build(path=f'{repo_path}', tag=f"{repo_name}:{tag}")
-                # verbose logs
-                for line in build_log:
-                    print(line)
-                print(f"Image built: {image}")
-                return image
-            except BuildError as build_err:
-                print(f"Build error: {build_err}")
-                return None
-            except APIError as api_err:
-                print(f"API error: {api_err}")
-                return None
-            except Exception as e:
-                print(f"An unexpected error occurred: {e}")
-                return None
-        build_image(repo_path=repos_folder, repo_name=repo_name, tag=tag)
-        
+    token_user = request.headers['Authorization']
+    ACR_LOGIN_SERVER = Config.ACR_LOGIN_SERVER
+    ACR_USERNAME = Config.ACR_USERNAME
+    ACR_PASSWORD = Config.ACR_PASSWORD
 
-        return repos_folder
-    except subprocess.CalledProcessError as e:
-        print(f"Subprocess error: {e}")
-        return False
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-        return False
+    repo_folder = TemplateService.clone_repository(username, repo_name, token_user)
 
+    if repo_folder:
+        image = TemplateService.build_docker_image(repo_folder, repo_name)
+        if image:
+            result = TemplateService.push_docker_image(image, ACR_LOGIN_SERVER, ACR_USERNAME, ACR_PASSWORD)
+            if result:
+                return jsonify({"message": f"Image built and pushed to ACR: {repo_name}"})
+            else:
+                return jsonify({"error": "Failed to push Docker image to ACR"}), 500
+        else:
+            return jsonify({"error": "Failed to build Docker image"}), 500
+    else:
+        return jsonify({"error": "Failed to clone the repository"}), 500
