@@ -19,6 +19,9 @@ class TemplateService:
             current_directory = os.getcwd()
             file_name = 'Dockerfile'
             repos_folder = os.path.join(current_directory, 'deployment', repo_name)
+            print(f"token_user: {token_user}")
+            print(f"username: {username}")
+            print(f"repo_name: {repo_name}")
             clone_url = f"https://{token_user}@github.com/{username}/{repo_name}.git"
             file_path = os.path.join(repos_folder, file_name)
 
@@ -31,7 +34,7 @@ class TemplateService:
             return repos_folder
         except subprocess.CalledProcessError as e:
             print(f"Subprocess error: {e}")
-            None
+            return None  
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
             return None
@@ -47,7 +50,7 @@ class TemplateService:
                 print(line)
 
             print(f"Image built: {image}")
-            image
+            return image  
         except BuildError as build_err:
             print(f"Build error: {build_err}")
             return None

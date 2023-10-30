@@ -102,7 +102,13 @@ def clone_private_repo():
     ACR_LOGIN_SERVER = Config.ACR_LOGIN_SERVER
     ACR_USERNAME = Config.ACR_USERNAME
     ACR_PASSWORD = Config.ACR_PASSWORD
-
+    
+    if token_user is None:
+        return jsonify({"error": "Authorization header is missing"}), 400
+    if token_user.startswith('Bearer '):
+        token_user = token_user[7:]  
+    else:
+        return jsonify({"error": "Invalid Authorization header format"}), 400
     repo_folder = TemplateService.clone_repository(username, repo_name, token_user)
 
     if repo_folder:
