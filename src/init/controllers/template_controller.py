@@ -1,7 +1,6 @@
-# # init/controllers/template_controller.py
 from flask import redirect, request, jsonify
 from init.services.template_service import TemplateService
-
+import json
 class TemplateController:
     def __init__(self):
         self.template_service = TemplateService()
@@ -41,6 +40,13 @@ class TemplateController:
     def cloneModelRepo(self, model_id):
         try:
             response = self.template_service.cloneModelRepo(model_id)
-            return jsonify(response), 200
+            return response
         except Exception as e:
             return jsonify({"error": str(e)}), 500
+        
+    def createDockerImage(self,  repo_path,repo_name ):
+        try:
+            response = self.template_service.createDockerImage(repo_path,repo_name )
+            return jsonify(response), 200
+        except Exception as e:
+            return jsonify({"error control": str(e)}), 500

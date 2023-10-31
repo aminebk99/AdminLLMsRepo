@@ -6,3 +6,4 @@ python-dotenv
 PyJWT
 requests_oauthlib
 huggingface_hub
+docker

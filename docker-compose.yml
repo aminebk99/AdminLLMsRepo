@@ -2,8 +2,8 @@ version: '3.8'
 
 services:
   app:
-    build: 
-      context: .
+    build: .
+    # privileged: true
     ports:
       - "5000:5000"
     environment:
@@ -14,6 +14,8 @@ services:
       - DATABASE_NAME=llmsdb
     volumes:
       - ./src:/app
+      - /var/run/docker.sock:/var/run/docker.sock  # Add this line to mount the Docker socket
+
     
     restart: always
     depends_on:
@@ -35,19 +37,21 @@ services:
     networks:
       - llm_network
 
-  phpmyadmin:
-    image: phpmyadmin
-    environment:
-      PMA_HOST: src_db
-    ports:
-      - "8080:8080"
-    restart: always
-    depends_on:
-      - src_db
-    networks:
-      - llm_network
+  # phpmyadmin:
+  #   image: phpmyadmin
+  #   environment:
+  #     PMA_HOST: src_db
+  #   ports:
+  #     - "8080:8080"
+  #   restart: always
+  #   depends_on:
+  #     - src_db
+  #   networks:
+  #     - llm_network
 
 
 networks:
   llm_network:
-    driver: bridge
+    driver: overlay
+    attachable: true
+  

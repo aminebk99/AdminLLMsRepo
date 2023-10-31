@@ -10,7 +10,8 @@ from huggingface_hub import (
     Repository,
     create_repo,
 )
-
+import docker
+from docker.errors import BuildError, APIError
 
 load_dotenv()
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
@@ -19,6 +20,7 @@ client_secret = os.getenv("HUGGINGFACE_CLIENT_SECRET")
 authorization_base_url = os.getenv("authorization_base_url")
 token_url = os.getenv("token_url")
 redirect_uri = "http://127.0.0.1:5000/auth/huggingface"
+huggingfaceToken = os.getenv("huggingfaceToken")
 
 
 class TemplateService:
@@ -119,18 +121,65 @@ class TemplateService:
     def cloneModelRepo(modelId):
         try:
             model = TemplateService.selectModelRepo(modelId)
-            token = "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"
-            localdirRepo = "D:\Git\Python\AdminLLMsRepo-1\src\init\repo"  # os.path() is not used correctly here
+            token = huggingfaceToken
+            targetdir = os.path.join(os.getcwd(), "models", model["modelId"])
             repoUrl = create_repo(repo_id=model["modelId"], token=token, exist_ok=True)
-            if model["modelId"]:  # Ensure the modelId exists in the model dictionary
+            if model["modelId"]:
                 repo = Repository(
-                    local_dir=localdirRepo,
+                    local_dir=targetdir,
                     clone_from=f"https://huggingface.co/{repoUrl}",
                 )
                 if repo is None:
                     return {"error": "Repo not cloned"}
-                return repo
+                
+                data = {
+                    "path":repo.local_dir,
+                    "repo_name":model["modelId"],
+                }
+                return data
             else:
                 return {"error": "Model ID not found in the model dictionary"}
         except Exception as e:
             return {"error": str(e)}
+
+    @staticmethod
+    def ensure_dockerfile_exists(path):
+        dockerfile_path = os.path.join(path, "Dockerfile")
+        if not os.path.isdir(path):
+            return f"Directory does not exist: {path}"
+        elif not os.path.isfile(dockerfile_path):
+            try:
+                with open(dockerfile_path, "w") as f:
+                    f.write(
+                        "FROM python:3.8-slim-buster\n"
+                    )  # This is a basic Dockerfile for a Python app
+                return f"Dockerfile created at {dockerfile_path}"
+            except Exception as e:
+                return f"Failed to create Dockerfile: {e}"
+        else:
+            return f"Dockerfile already exists at {dockerfile_path}"
+
+    @staticmethod
+    def createDockerImage(repo_path, repo_name, tag="latest"):
+        check = TemplateService.ensure_dockerfile_exists(repo_path)
+        if "error" in check:
+            return check
+        client = docker.from_env()
+        try:
+            repo_name = repo_name.lower()
+            image, build_log = client.images.build(
+                path=repo_path, tag=f"{repo_name}:{tag}"
+            )
+            for line in build_log:
+                print(line)
+            image_info: dict = {
+                "id": image.id,
+                "tags": image.tags,
+                "short_id": image.short_id,
+                "attrs": image.attrs,
+            }
+            return image_info
+        except (BuildError, APIError) as err:
+            return f"error: {str(err)}"
+        except Exception as e:
+            return f"unexpected error: {str(e)}"
