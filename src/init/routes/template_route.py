@@ -1,6 +1,14 @@
-# # init/routes/template_route.py
+# # init/routes/template_blueprint.py
 from flask import Blueprint, jsonify, request
 from init.controllers.template_controller import TemplateController
+from flask import Blueprint, url_for, current_app, request, jsonify
+from authlib.integrations.flask_client import OAuth
+from init.services.template_service import TemplateService
+from init import controllers
+from ..config import Config
+import os
+import requests
+import subprocess
 
 template_blueprint = Blueprint("template", __name__)
 controller = TemplateController()
@@ -34,7 +42,6 @@ def clone_from_huggingface():
     model_id = request.args.get("modelId", default=None, type=str)
     if model_id is None:
         return jsonify({"error": "No modelId provided"}), 400
-
     try:
         modelID = controller.selectModelRepo(model_id)
         if "error" in modelID:
@@ -45,42 +52,115 @@ def clone_from_huggingface():
             return jsonify(clone), 500
         controller.createDockerImage(clone["path"], clone["repo_name"])
         return jsonify({"success": "Docker Image Created"}), 200
-
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-# @template_blueprint.route("/api/v1/SelectModelRepo", methods=["get"])
-# def select_model_repo():
-#     repo = request.args.get("modelId", default=None, type=str)
-#     if repo is None:
-#         return jsonify({"error": "No repo provided"}), 400
-#     else:
-#         return controller.selectModelRepo(repo)
+        return jsonify({"error": str(e) }), 500
 
 
-# @template_blueprint.route("/api/v1/CloneModelRepo", methods=["get"])
-# def clone_model_repo():
-#     repo = request.args.get("modelId", default=None, type=str)
-#     if repo is None:
-#         return jsonify({"error": "No repo provided"}), 400
-#     else:
-#         try:
-#             return controller.cloneModelRepo(repo)
-#         except Exception as e:
-#             return jsonify({"error": str(e)}), 500
+oauth = OAuth(current_app)
+
+github = oauth.register(
+    name="github",
+    client_id=Config.GITHUB_CLIENT_ID,
+    client_secret=Config.GITHUB_CLIENT_SECRET,
+    authorize_url="https://github.com/login/oauth/authorize",
+    authorize_params=None,
+    access_token_url="https://github.com/login/oauth/access_token",
+    access_token_params=None,
+    client_kwargs={"scope": "user:email repo"},
+)
 
 
-# @template_blueprint.route("/api/v1/createDockerImage", methods=["post"])
-# def createDocker():
-#     repo = request.json
-#     repo_name = repo.get("repo_name", None)
-#     repo_path = repo.get("repo_path", None)
-#     if repo_name is None:
-#         return jsonify({"error": "No repo_name provided"}), 400
-#     elif repo_path is None:
-#         return jsonify({"error": "No repo_path provided"}), 400
-#     else:
-#         try:
-#             return controller.createDockerImage(repo_path, repo_name)
-#         except Exception as e:
-#             return jsonify({"error route": str(e)}), 500
+# Route for initiating the GitHub login
+@template_blueprint.route("/api/v1/login")
+def login():
+    github_client = oauth.create_client("github")
+    redirect_uri = url_for("template.authorize", _external=True)
+    print(f"Redirect URI: {redirect_uri}")
+    return github_client.authorize_redirect(redirect_uri)
+
+
+@template_blueprint.route("/api/v1/authorize")
+def authorize():
+    github = oauth.create_client("github")
+    token = github.authorize_access_token()
+
+    # Fetch user information
+    user_resp = github.get("https://api.github.com/user")
+    user_info = user_resp.json()
+    email = user_info.get("email", None)
+    # github_id = user_info.get('id')
+
+    # Fetch the user's repositories
+    repo_resp = github.get("https://api.github.com/user/repos")
+    repo_info = repo_resp.json()
+
+    if repo_info:
+        # Save the first repository's name and URL
+        repo_name = repo_info[0]["name"]
+        repo_url = repo_info[0]["clone_url"]
+    else:
+        repo_name = "Repository not found in the database"
+        repo_url = "Repository URL not found"
+
+    return f'Access Token: {token["access_token"]}<br>Hello, {email}<br>!<br>Your repo name is: {repo_name}<br>Repository URL for cloning: {repo_url}'
+
+
+@template_blueprint.route("/api/v1/github/repos")
+def fetch_all_repos():
+    token = request.args.get("token")
+    if not token:
+        return jsonify({"error": "Token not provided"}), 400
+    github_api_url = "https://api.github.com/user/repos"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github.v3+json",
+    }
+    response = requests.get(github_api_url, headers=headers)
+    if response.status_code == 200:
+        repos = response.json()
+        return jsonify(repos)
+    else:
+        return (
+            jsonify(
+                {
+                    "error": f"Failed to fetch repositories. Status code: {response.status_code}"
+                }
+            ),
+            response.status_code,
+        )
+
+
+@template_blueprint.route("/api/v1/github/clone", methods=["POST"])
+def clone_private_repo():
+    data = request.get_json()
+    repo_name = data.get("repo_name")
+    username = data.get("username")
+    token_user = request.headers["Authorization"]
+    ACR_LOGIN_SERVER = Config.ACR_LOGIN_SERVER
+    ACR_USERNAME = Config.ACR_USERNAME
+    ACR_PASSWORD = Config.ACR_PASSWORD
+
+    if token_user is None:
+        return jsonify({"error": "Authorization header is missing"}), 400
+    if token_user.startswith("Bearer "):
+        token_user = token_user[7:]
+    else:
+        return jsonify({"error": "Invalid Authorization header format"}), 400
+    repo_folder = TemplateService.clone_repository(username, repo_name, token_user)
+
+    if repo_folder:
+        image = TemplateService.build_docker_image(repo_folder, repo_name)
+        if image:
+            result = TemplateService.push_docker_image(
+                image, ACR_LOGIN_SERVER, ACR_USERNAME, ACR_PASSWORD
+            )
+            if result:
+                return jsonify(
+                    {"message": f"Image built and pushed to ACR: {repo_name}"}
+                )
+            else:
+                return jsonify({"error": "Failed to push Docker image to ACR"}), 500
+        else:
+            return jsonify({"error": "Failed to build Docker image"}), 500
+    else:
+        return jsonify({"error": "Failed to clone the repository"}), 500

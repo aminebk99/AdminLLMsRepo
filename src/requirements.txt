@@ -7,3 +7,7 @@ PyJWT
 requests_oauthlib
 huggingface_hub
 docker
+mysql-connector-python
+Flask-OAuthlib
+Authlib
+docker

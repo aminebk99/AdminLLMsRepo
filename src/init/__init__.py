@@ -7,13 +7,11 @@ from .models import *
 from .database import db
 from .routes import *
 
-
-
-
 app = Flask(__name__)
 app.config.from_object(Config)
 app.secret_key = os.getenv('SECRET_KEY')
 
+app.secret_key = app.config['SECRET_KEY']
 
 migrate = Migrate(app, db)
 

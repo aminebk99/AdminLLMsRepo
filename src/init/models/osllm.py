@@ -1,4 +1,4 @@
-# from init  import db
+from ..database import db
 
 
 class OSLLM:
