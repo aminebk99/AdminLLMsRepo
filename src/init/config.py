@@ -7,7 +7,7 @@ load_dotenv()
 app = Flask(__name__)
 
 class Config:
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URI') or 'mysql+mysqlconnector://root:secret@src_db/llmsdb'
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URI') or 'mysql://root:secret@src_db/llmsdb'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'F974135B4E19A99341FDA8963BE52'

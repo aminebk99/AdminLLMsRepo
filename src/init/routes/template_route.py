@@ -1,12 +1,9 @@
 # init/routes/template_route.py
 from flask import Blueprint, url_for, current_app, request, jsonify
 from authlib.integrations.flask_client import OAuth
-from init.services.template_service import TemplateService
 from init import controllers
 from ..config import Config
-import os
 import requests
-import subprocess
 
 
 template_route = Blueprint('template', __name__)
@@ -96,30 +93,5 @@ def fetch_all_repos():
 @template_route.route('/github/clone', methods=['POST'])
 def clone_private_repo():
     data = request.get_json()
-    repo_name = data.get('repo_name')
-    username = data.get('username')
-    token_user = request.headers['Authorization']
-    ACR_LOGIN_SERVER = Config.ACR_LOGIN_SERVER
-    ACR_USERNAME = Config.ACR_USERNAME
-    ACR_PASSWORD = Config.ACR_PASSWORD
-    
-    if token_user is None:
-        return jsonify({"error": "Authorization header is missing"}), 400
-    if token_user.startswith('Bearer '):
-        token_user = token_user[7:]  
-    else:
-        return jsonify({"error": "Invalid Authorization header format"}), 400
-    repo_folder = TemplateService.clone_repository(username, repo_name, token_user)
-
-    if repo_folder:
-        image = TemplateService.build_docker_image(repo_folder, repo_name)
-        if image:
-            result = TemplateService.push_docker_image(image, ACR_LOGIN_SERVER, ACR_USERNAME, ACR_PASSWORD)
-            if result:
-                return jsonify({"message": f"Image built and pushed to ACR: {repo_name}"})
-            else:
-                return jsonify({"error": "Failed to push Docker image to ACR"}), 500
-        else:
-            return jsonify({"error": "Failed to build Docker image"}), 500
-    else:
-        return jsonify({"error": "Failed to clone the repository"}), 500
+    result = controllers.TemplateController.clone_repos(data)
+    return result
