@@ -1,3 +1,6 @@
+from flask import redirect, request, jsonify
+from init.services.template_service import TemplateService
+import json
 # init/controllers/template_controller.py
 from flask import request, jsonify
 from init.services import TemplateService
@@ -34,32 +37,49 @@ class TemplateController:
         else:
             return jsonify({"error": "Failed to clone the repository"}), 500
 
-    def login_with_huggingface():
+    template = TemplateService()
+    def login_with_huggingface(self):
         try:
-            token = TemplateService.loginWithHuggingFace()
+            token = self.template.loginWithHuggingFace()
             return jsonify({"access_token": token}), 200
         except Exception as e:
             return jsonify({"error": str(e)}), 500
-    def fetch_models_from_huggingface():
+        
+    def Callback(self):
         try:
-            huggingface_models_url = "https://api-inference.huggingface.co/models"
-            response = requests.get(huggingface_models_url)
-            if response.status_code == 200:
-                models_data = response.json()
-                model_names = [model['model_id'] for model in models_data]
-                return jsonify({'models': model_names})
-
-            else:
-                return jsonify({'error': 'Failed to fetch models from Hugging Face'})
-        except Exception as e:
-            return jsonify({'error': str(e)})
-
-    def create_docker_image( model_id):
-        try:
-            TemplateService.createDockerImage(model_id)
-            return jsonify({"message": "Docker image creation in progress"}), 202
+            response, status = self.template.Callback()
+            return response
         except Exception as e:
             return jsonify({"error": str(e)}), 500
+
+    def fetch_models_from_huggingface(self,query,page ):
+        try:
+            models = self.template.fetchModelsFromHuggingFace(query=query,page=page)
+            return jsonify(models), 200
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    def selectModelRepo(self,model_id):
+        try:
+            response = self.template.selectModelRepo(model_id)
+            return jsonify(response), 200
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+        
+    def cloneModelRepo(self,model_id):
+        try:
+            response = self.template.cloneModelRepo(model_id)
+            return response
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+        
+    def createDockerImage(self,repo_path,repo_name):
+        try:
+            response = self.template.createDockerImage(repo_path,repo_name )
+            return jsonify(response), 200
+        except Exception as e:
+            return jsonify({"error control": str(e)}), 500
+
         
     def fetch_github_repos():
         try:
@@ -68,17 +88,17 @@ class TemplateController:
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 
-    def create_cloud_llm_template():
+    def create_cloud_llm_template(self):
         try:
             template_data = request.get_json()
-            TemplateService.createCloudLLMTemplate(template_data)
+            self.template.createCloudLLMTemplate(template_data)
             return jsonify({"message": "Cloud LLM template created"}), 201
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 
-    def get_template( template_id):
+    def get_template(self,template_id):
         try:
-            template = TemplateService.getTemplate(template_id)
+            template = self.template.getTemplate(template_id)
             if template:
                 return jsonify(template), 200
             else:

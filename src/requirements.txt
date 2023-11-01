@@ -3,6 +3,10 @@ Flask-SQLAlchemy
 Flask-Migrate
 mysqlclient
 python-dotenv
+PyJWT
+requests_oauthlib
+huggingface_hub
+docker
 mysql-connector-python
 Flask-OAuthlib
 Authlib
