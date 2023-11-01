@@ -7,7 +7,7 @@ class LLMTemplate(db.Model):
     name = db.Column(db.String(70), nullable=False)
     description = db.Column(db.String(200) , nullable=True)
     docker_image_url = db.Column(db.String(200))
-    type = db.Column(db.Enum('OS_LLM', 'Cloud_LLM'), nullable=False)
+    type = db.Column(db.Enum('OS_LLM', 'Cloud_LLM'), default='OS_LLM', nullable=False)
     uuid = db.Column(db.String(36), default=str(uuid.uuid4()), unique=True, nullable=False)
     version = db.Column(db.Float, default=1.0)
     is_active = db.Column(db.Boolean, default=True)

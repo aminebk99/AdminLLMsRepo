@@ -1,4 +1,4 @@
-FROM docker:dind
+FROM docker.io/library/alpine:latest
 
 # Set the working directory in Docker
 WORKDIR /app
