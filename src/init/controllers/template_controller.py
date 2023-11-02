@@ -5,8 +5,41 @@ import json
 from flask import request, jsonify
 from init.services import TemplateService
 import requests
+from ..config import Config
+from init.services import clone_repo, push_repo, save_data_template
 
 class TemplateController:
+    def clone_repos(data):
+        repo_name = data.get('repo_name')
+        username = data.get('username')
+        description = data.get('description')
+        tags = data.get('tags')
+        type = data.get('type')
+        token_user = request.headers['Authorization']
+        ACR_LOGIN_SERVER = Config.ACR_LOGIN_SERVER
+        ACR_USERNAME = Config.ACR_USERNAME
+        ACR_PASSWORD = Config.ACR_PASSWORD
+    
+        if token_user is None:
+            return jsonify({"error": "Authorization header is missing"}), 400
+        if token_user.startswith('Bearer '):
+            token_user = token_user[7:]  
+        else:
+            return jsonify({"error": "Invalid Authorization header format"}), 400
+        repo_folder = clone_repo.clone_repository(username, repo_name, token_user)
+        if repo_folder:
+            image = TemplateService.build_docker_image(repo_folder, repo_name)
+            if image:
+                result = push_repo.push_docker_image(image, ACR_LOGIN_SERVER, ACR_USERNAME, ACR_PASSWORD)
+                if result:
+                    save_data_template(name = repo_name, description = description, image_url = result, type = type, tags = tags)
+                    return jsonify({"message": f"Image built and pushed to ACR: {repo_name}"})
+                else:
+                    return jsonify({"error": "Failed to push Docker image to ACR"}), 500
+            else:
+                return jsonify({"error": "Failed to build Docker image"}), 500
+        else:
+            return jsonify({"error": "Failed to clone the repository"}), 500
 
     template = TemplateService()
     def login_with_huggingface(self):

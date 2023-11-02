@@ -19,7 +19,7 @@ db.init_app(app)
 
 
 app.register_blueprint(cloudllm_route)
-app.register_blueprint(template_blueprint)
+app.register_blueprint(template_route)
 
 
 
