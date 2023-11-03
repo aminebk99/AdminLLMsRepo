@@ -15,6 +15,7 @@ def clone_repository(username, repo_name, token_user):
             with open('./docker/dockerfile', 'r') as firstfile, open(file_path, 'a') as secondfile:
                 for line in firstfile:
                     secondfile.write(line)
+            print(repos_folder)
             return repos_folder
         except subprocess.CalledProcessError as e:
             print(f"Subprocess error: {e}")

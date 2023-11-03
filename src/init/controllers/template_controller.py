@@ -6,9 +6,12 @@ from flask import request, jsonify
 from init.services import TemplateService
 import requests
 from ..config import Config
-from init.services import clone_repo, push_repo, save_data_template
+from init.services import clone_repo, push_repo
+from init.services.save_data_template import create_llms as save_data_template
 
 class TemplateController:
+    template = TemplateService()
+
     def clone_repos(data):
         repo_name = data.get('repo_name')
         username = data.get('username')
@@ -28,7 +31,38 @@ class TemplateController:
             return jsonify({"error": "Invalid Authorization header format"}), 400
         repo_folder = clone_repo.clone_repository(username, repo_name, token_user)
         if repo_folder:
-            image = TemplateService.build_docker_image(repo_folder, repo_name)
+            image = TemplateService.createDockerImage(repo_folder, repo_name)
+            if image:
+                result = push_repo.push_docker_image(image, ACR_LOGIN_SERVER, ACR_USERNAME, ACR_PASSWORD)
+                if result:
+                    save_data_template(name = repo_name, description = description, image_url = result, type = type, tags = tags)
+                    return jsonify({"message": f"Image built and pushed to ACR: {repo_name} {result}"})
+                else:
+                    return jsonify({"error": "Failed to push Docker image to ACR"}), 500
+            else:
+                return jsonify({"error": "Failed to build Docker image"}), 500
+        else:
+            return jsonify({"error": "Failed to clone the repository"}), 500
+        
+
+    def clone_repos_from_huggingface(data):
+        modelId = data.get('modelId')
+        ACR_LOGIN_SERVER = Config.ACR_LOGIN_SERVER
+        ACR_USERNAME = Config.ACR_USERNAME
+        ACR_PASSWORD = Config.ACR_PASSWORD
+        if modelId is None:
+            return jsonify({"error": "Model ID is missing"}), 400
+        try:
+            repo = TemplateService.cloneModelRepo(modelId)
+            description = repo.get("repo_name")
+
+            if repo is None:
+                return jsonify({"error": "Failed to clone the repository"}), 500
+            repo_folder = repo.get("path")
+            repo_name = repo.get("repo_name")
+            image = TemplateService.createDockerImage(repo_folder, repo_name)
+            tags = image
+            print(image,repo_name)
             if image:
                 result = push_repo.push_docker_image(image, ACR_LOGIN_SERVER, ACR_USERNAME, ACR_PASSWORD)
                 if result:
@@ -38,10 +72,9 @@ class TemplateController:
                     return jsonify({"error": "Failed to push Docker image to ACR"}), 500
             else:
                 return jsonify({"error": "Failed to build Docker image"}), 500
-        else:
-            return jsonify({"error": "Failed to clone the repository"}), 500
-
-    template = TemplateService()
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+    
     def login_with_huggingface(self):
         try:
             token = self.template.loginWithHuggingFace()
@@ -63,28 +96,7 @@ class TemplateController:
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 
-    def selectModelRepo(self,model_id):
-        try:
-            response = self.template.selectModelRepo(model_id)
-            return jsonify(response), 200
-        except Exception as e:
-            return jsonify({"error": str(e)}), 500
-        
-    def cloneModelRepo(self,model_id):
-        try:
-            response = self.template.cloneModelRepo(model_id)
-            return response
-        except Exception as e:
-            return jsonify({"error": str(e)}), 500
-        
-    def createDockerImage(self,repo_path,repo_name):
-        try:
-            response = self.template.createDockerImage(repo_path,repo_name )
-            return jsonify(response), 200
-        except Exception as e:
-            return jsonify({"error control": str(e)}), 500
-
-        
+ 
     def fetch_github_repos():
         try:
             user_token = request.headers.get("Authorization")

@@ -1,6 +1,6 @@
 from init import db
 from init.models import LLMTemplate
-from flask import session, url_for, jsonify, redirect  
+from flask import session, url_for, jsonify, redirect
 from ..config import Config
 import docker
 from docker.errors import BuildError, APIError, DockerException, ImageNotFound
@@ -128,19 +128,25 @@ class TemplateService:
         try:
             model = TemplateService.selectModelRepo(modelId)
             token = huggingfaceToken
-            targetdir = os.path.join(os.getcwd(), "models", model["modelId"])
+            current_directory = os.getcwd()
+            file_name = 'Dockerfile'
+            repos_folder = os.path.join(current_directory, 'deployment', model["modelId"])
             repoUrl = create_repo(repo_id=model["modelId"], token=token, exist_ok=True)
             if model["modelId"]:
                 repo = Repository(
-                    local_dir=targetdir,
+                    local_dir=repos_folder,
                     clone_from=f"https://huggingface.co/{repoUrl}",
                 )
+                file_path = os.path.join(repos_folder, file_name)
+                with open('./docker/dockerfile', 'r') as firstfile, open(file_path, 'w') as secondfile:
+                    for line in firstfile:
+                        secondfile.write(line)
                 if repo is None:
                     return {"error": "Repo not cloned"}
-                
+
                 data = {
-                    "path":repo.local_dir,
-                    "repo_name":model["modelId"],
+                    "path": repo.local_dir,
+                    "repo_name": model["modelId"],
                 }
                 return data
             else:
@@ -167,9 +173,9 @@ class TemplateService:
 
     @staticmethod
     def createDockerImage(repo_path, repo_name, tag="latest"):
-        check = TemplateService.ensure_dockerfile_exists(repo_path)
-        if "error" in check:
-            return check
+        # check = TemplateService.ensure_dockerfile_exists(repo_path)
+        # if "error" in check:
+        #     return check
         client = docker.from_env()
         try:
             repo_name = repo_name.lower()
@@ -184,36 +190,15 @@ class TemplateService:
                 "short_id": image.short_id,
                 "attrs": image.attrs,
             }
-            return image_info
+            return image_info.get("tags")[0]
         except (BuildError, APIError) as err:
             return f"error: {str(err)}"
         except Exception as e:
             return f"unexpected error: {str(e)}"
-    
+
     @staticmethod
     def loginWithGithub(github):
-        callback_url = url_for('/authorized', _external=True)
+        callback_url = url_for("/authorized", _external=True)
         return github.authorize_redirect(callback=callback_url)
-    
-    def build_docker_image(repo_path, repo_name, tag='latest'):
-        try:
-            repo_name = repo_name.lower()
-            client = docker.from_env()
-            print(f"Building image from {repo_path}")
-            image, build_log = client.images.build(path=repo_path, tag=f"{repo_name}:{tag}")
 
-            for line in build_log:
-                print(line)
-
-            print(f"Image built: {image}")
-            return image  
-        except BuildError as build_err:
-            print(f"Build error: {build_err}")
-            return None
-        except APIError as api_err:
-            print(f"API error: {api_err}")
-            return None
-        except Exception as e:
-            print(f"An unexpected error occurred: {e}")
-            return None
-
+  

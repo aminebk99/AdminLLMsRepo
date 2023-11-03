@@ -1,7 +1,8 @@
 # init/routes/template_route.py
 from flask import Blueprint, url_for, current_app, request, jsonify
 from authlib.integrations.flask_client import OAuth
-from init import controllers
+from init import controllers 
+from init.controllers import template_controller
 from ..config import Config
 import requests
 
@@ -94,4 +95,10 @@ def fetch_all_repos():
 def clone_private_repo():
     data = request.get_json()
     result = controllers.TemplateController.clone_repos(data)
+    return result
+
+@template_route.route('/huggingface/clone', methods=['POST'])
+def clone_huggingface_repo():
+    data = request.get_json()
+    result = template_controller.TemplateController.clone_repos_from_huggingface(data)
     return result
