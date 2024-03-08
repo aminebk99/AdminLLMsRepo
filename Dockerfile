@@ -26,9 +26,4 @@ RUN pip3 install --no-cache-dir -r requirements.txt
 # Copy the content of the local src directory to the working directory
 COPY src/ .
 
-# Add a script to start your application
-COPY startup.sh /startup.sh
-RUN chmod +x /startup.sh
-
-# EXPOSE 2375
-CMD ["/startup.sh"]
+CMD [ "python3" , "app.py" ]
